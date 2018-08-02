@@ -24,11 +24,12 @@ def build_from_path(in_dir, out_dir, num_workers=1, tqdm=lambda x: x):
     index = 1
     with open(os.path.join(in_dir, 'text'), encoding='utf-8') as f:
         for line in f:
+            line = line.strip()
             sep = line.find(' ')
             name = re.sub("[0-9]+",strip_digit, line[:sep])
             if (not re.match('A2_',name)):
                 continue
-            text = pinyin.get(line[sep+1:], format="strip", delimiter=" ")
+            text = pinyin.get(line[sep+1:], format="diacritical", delimiter=" ")
             wav_path = os.path.join(in_dir, 'wavs', '%s.wav' % name)
             futures.append(executor.submit(
                 partial(_process_utterance, out_dir, index, wav_path, text)))
