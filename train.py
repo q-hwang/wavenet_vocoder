@@ -541,13 +541,15 @@ def eval_model(global_step, writer, device, model, y, c, g, input_lengths, eval_
     os.makedirs(eval_dir, exist_ok=True)
     path = join(eval_dir, "step{:09d}_predicted.wav".format(global_step))
     librosa.output.write_wav(path, y_hat, sr=hparams.sample_rate)
+    writer.add_audio("wav_predicted", y_hat, global_step=global_step, sample_rate=hparams.sample_rate)
+    
     path = join(eval_dir, "step{:09d}_target.wav".format(global_step))
     librosa.output.write_wav(path, y_target, sr=hparams.sample_rate)
+    writer.add_audio("wav_target", y_target, global_step=global_step, sample_rate=hparams.sample_rate)
 
     # save figure
     path = join(eval_dir, "step{:09d}_waveplots.png".format(global_step))
     save_waveplot(path, y_hat, y_target)
-
 
 def save_states(global_step, writer, y_hat, y, input_lengths, checkpoint_dir=None):
     print("Save intermediate states at step {}".format(global_step))
