@@ -77,8 +77,8 @@ def _process_utterance(out_dir, index, wav_path, text):
     timesteps = len(out)
 
     # Write the spectrograms to disk:
-    audio_filename = 'ljspeech-audio-%05d.npy' % index
-    mel_filename = 'ljspeech-mel-%05d.npy' % index
+    audio_filename = 'avocado-audio-%05d.npy' % index
+    mel_filename = 'avocadomel-%05d.npy' % index
     np.save(os.path.join(out_dir, audio_filename),
             out.astype(out_dtype), allow_pickle=False)
     np.save(os.path.join(out_dir, mel_filename),

@@ -12,6 +12,7 @@ options:
     --log-event-path=<name>      Log event path.
     --reset-optimizer            Reset optimizer.
     --speaker-id=<N>             Use specific speaker of data in case for multi-speaker datasets.
+    --is_experiment=<T/F>        Use training samples as test
     -h, --help                   Show this help message and exit
 """
 from docopt import docopt
@@ -851,27 +852,52 @@ def restore_parts(path, model):
                 warn("{}: may contain invalid size of weight. skipping...".format(k))
 
 
-def get_data_loaders(data_root, speaker_id, test_shuffle=True):
+def get_data_loaders(data_root, speaker_id, is_experiment, test_shuffle=True):
     data_loaders = {}
     local_conditioning = hparams.cin_channels > 0
     for phase in ["train", "test"]:
         train = phase == "train"
-        X = FileSourceDataset(RawAudioDataSource(data_root, speaker_id=speaker_id,
-                                                 train=train,
-                                                 test_size=hparams.test_size,
-                                                 test_num_samples=hparams.test_num_samples,
-                                                 random_state=hparams.random_state))
-        if local_conditioning:
-            Mel = FileSourceDataset(MelSpecDataSource(data_root, speaker_id=speaker_id,
-                                                      train=train,
-                                                      test_size=hparams.test_size,
-                                                      test_num_samples=hparams.test_num_samples,
-                                                      random_state=hparams.random_state))
-            assert len(X) == len(Mel)
-            print("Local conditioning enabled. Shape of a sample: {}.".format(
-                Mel[0].shape))
+        if not is_experiment:
+            X = FileSourceDataset(RawAudioDataSource(data_root, speaker_id=speaker_id,
+                                                     train=train,
+                                                     test_size=hparams.test_size,
+                                                     test_num_samples=hparams.test_num_samples,
+                                                     random_state=hparams.random_state))
+            if local_conditioning:
+                Mel = FileSourceDataset(MelSpecDataSource(data_root, speaker_id=speaker_id,
+                                                          train=train,
+                                                          test_size=hparams.test_size,
+                                                          test_num_samples=hparams.test_num_samples,
+                                                          random_state=hparams.random_state))
+                assert len(X) == len(Mel)
+                print("Local conditioning enabled. Shape of a sample: {}.".format(
+                    Mel[0].shape))
+            else:
+                Mel = None
         else:
-            Mel = None
+            # for small dataset experiment
+            if train:
+                test_size = 0
+            else: 
+                test_size = hparams.test_size
+                
+            X = FileSourceDataset(RawAudioDataSource(data_root, speaker_id=speaker_id,
+                                                     train=train,
+                                                     test_size=test_size,
+                                                     test_num_samples=hparams.test_num_samples,
+                                                     random_state=hparams.random_state))
+            if local_conditioning:
+                Mel = FileSourceDataset(MelSpecDataSource(data_root, speaker_id=speaker_id,
+                                                          train=train,
+                                                          test_size=test_size,
+                                                          test_num_samples=hparams.test_num_samples,
+                                                          random_state=hparams.random_state))
+                assert len(X) == len(Mel)
+                print("Local conditioning enabled. Shape of a sample: {}.".format(
+                    Mel[0].shape))
+            else:
+                Mel = None
+            
         print("[{}]: length of the dataset is {}".format(phase, len(X)))
 
         if train:
@@ -914,6 +940,7 @@ if __name__ == "__main__":
     speaker_id = args["--speaker-id"]
     speaker_id = int(speaker_id) if speaker_id is not None else None
     preset = args["--preset"]
+    is_experiment = args["--is_experiment"] == "Y"
 
     data_root = args["--data-root"]
     if data_root is None:
@@ -934,7 +961,7 @@ if __name__ == "__main__":
     os.makedirs(checkpoint_dir, exist_ok=True)
 
     # Dataloader setup
-    data_loaders = get_data_loaders(data_root, speaker_id, test_shuffle=True)
+    data_loaders = get_data_loaders(data_root, speaker_id, is_experiment, test_shuffle=True)
 
     device = torch.device("cuda" if use_cuda else "cpu")
 
