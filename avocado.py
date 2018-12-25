@@ -24,6 +24,13 @@ def build_from_path(in_dir, out_dir, num_workers=1, tqdm=lambda x: x):
             futures.append(executor.submit(
                 partial(_process_utterance, out_dir, index, parts[0], parts[1])))
             index += 1
+    
+    with open(os.path.join(in_dir, 'eval.txt'), encoding='utf-8') as f:
+        for line in f:
+            parts = line.strip().split('|')
+            futures.append(executor.submit(
+                partial(_process_utterance, out_dir, index, parts[0], parts[1])))
+            index += 1
     return [future.result() for future in tqdm(futures)]
 
 
