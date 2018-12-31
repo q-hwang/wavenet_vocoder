@@ -60,8 +60,6 @@ from wavenet_vocoder.mixture import sample_from_discretized_mix_logistic
 import audio
 from hparams import hparams, hparams_debug_string
 
-fs = hparams.sample_rate
-
 global_step = 0
 global_test_step = 0
 global_epoch = 0
@@ -93,9 +91,9 @@ def _pad(seq, max_len, constant_values=0):
                   mode='constant', constant_values=constant_values)
 
 
-def _pad_2d(x, max_len, b_pad=0):
+def _pad_2d(x, max_len, b_pad=0, constant_values=0):
     x = np.pad(x, [(b_pad, max_len - len(x) - b_pad), (0, 0)],
-               mode="constant", constant_values=0)
+               mode="constant", constant_values=constant_values)
     return x
 
 
@@ -387,7 +385,6 @@ def collate_fn(batch):
                     if len(x) > max_steps:
                         max_time_frames = max_steps // audio.get_hop_size()
                         s = np.random.randint(0, len(c) - max_time_frames)
-                        #print("Size of file=%6d, t_offset=%6d"  % (len(c), s,))
                         ts = s * audio.get_hop_size()
                         x = x[ts:ts + audio.get_hop_size() * max_time_frames]
                         c = c[s:s + max_time_frames, :]
@@ -421,9 +418,10 @@ def collate_fn(batch):
     # (B, T, C)
     # pad for time-axis
     if is_mulaw_quantize(hparams.input_type):
+        padding_value = P.mulaw_quantize(0, mu=hparams.quantize_channels)
         x_batch = np.array([_pad_2d(np_utils.to_categorical(
             x[0], num_classes=hparams.quantize_channels),
-            max_input_len) for x in batch], dtype=np.float32)
+            max_input_len, 0, padding_value) for x in batch], dtype=np.float32)
     else:
         x_batch = np.array([_pad_2d(x[0].reshape(-1, 1), max_input_len)
                             for x in batch], dtype=np.float32)
@@ -431,7 +429,9 @@ def collate_fn(batch):
 
     # (B, T)
     if is_mulaw_quantize(hparams.input_type):
-        y_batch = np.array([_pad(x[0], max_input_len) for x in batch], dtype=np.int)
+        padding_value = P.mulaw_quantize(0, mu=hparams.quantize_channels)
+        y_batch = np.array([_pad(x[0], max_input_len, constant_values=padding_value)
+                            for x in batch], dtype=np.int)
     else:
         y_batch = np.array([_pad(x[0], max_input_len) for x in batch], dtype=np.float32)
     assert len(y_batch.shape) == 2
@@ -495,7 +495,10 @@ def eval_model(global_step, writer, device, model, y, c, g, input_lengths, eval_
     y_target = y[idx].view(-1).data.cpu().numpy()[:length]
 
     if c is not None:
-        c = c[idx, :, :length].unsqueeze(0)
+        if hparams.upsample_conditional_features:
+            c = c[idx, :, :length // audio.get_hop_size()].unsqueeze(0)
+        else:
+            c = c[idx, :, :length].unsqueeze(0)
         assert c.dim() == 3
         print("Shape of local conditioning features: {}".format(c.size()))
     if g is not None:
@@ -639,9 +642,12 @@ def __train_step(device, phase, epoch, global_step, global_test_step,
     # NOTE: softmax is handled in F.cross_entrypy_loss
     # y_hat: (B x C x T)
 
-    # multi gpu support
-    # you must make sure that batch size % num gpu == 0
-    y_hat = torch.nn.parallel.data_parallel(model, (x, c, g, False))
+    if use_cuda:
+        # multi gpu support
+        # you must make sure that batch size % num gpu == 0
+        y_hat = torch.nn.parallel.data_parallel(model, (x, c, g, False))
+    else:
+        y_hat = model(x, c, g, False)
 
     if is_mulaw_quantize(hparams.input_type):
         # wee need 4d inputs for spatial cross entropy loss
@@ -796,6 +802,7 @@ def build_model():
         upsample_scales=hparams.upsample_scales,
         freq_axis_kernel_size=hparams.freq_axis_kernel_size,
         scalar_input=is_scalar_input(hparams.input_type),
+        legacy=hparams.legacy,
     )
     return model
 
@@ -917,14 +924,15 @@ def get_data_loaders(data_root, speaker_id, is_experiment, test_shuffle=True):
             collate_fn=collate_fn, pin_memory=hparams.pin_memory)
 
         speaker_ids = {}
-        for idx, (x, c, g) in enumerate(dataset):
-            if g is not None:
-                try:
-                    speaker_ids[g] += 1
-                except KeyError:
-                    speaker_ids[g] = 1
-        if len(speaker_ids) > 0:
-            print("Speaker stats:", speaker_ids)
+        if X.file_data_source.multi_speaker:
+            for idx, (x, c, g) in enumerate(dataset):
+                if g is not None:
+                    try:
+                        speaker_ids[g] += 1
+                    except KeyError:
+                        speaker_ids[g] = 1
+            if len(speaker_ids) > 0:
+                print("Speaker stats:", speaker_ids)
 
         data_loaders[phase] = data_loader
 
@@ -957,6 +965,8 @@ if __name__ == "__main__":
     hparams.parse(args["--hparams"])
     assert hparams.name == "wavenet_vocoder"
     print(hparams_debug_string())
+
+    fs = hparams.sample_rate
 
     os.makedirs(checkpoint_dir, exist_ok=True)
 

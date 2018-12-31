@@ -6,7 +6,7 @@ import setuptools.command.build_py
 import os
 import subprocess
 
-version = '0.0.5'
+version = '0.1.1'
 
 # Adapted from https://github.com/pytorch/pytorch
 cwd = os.path.dirname(os.path.abspath(__file__))
@@ -56,17 +56,17 @@ setup(name='wavenet_vocoder',
       install_requires=[
           "numpy",
           "scipy",
-          "torch >= 0.4.0",
+          "torch >= 0.4.1",
       ],
       extras_require={
           "train": [
               "docopt",
               "tqdm",
-              "tensorboardX",
+              "tensorboardX <= 1.2.0",
               "nnmnkwii >= 0.0.11",
               "keras",
               "scikit-learn",
-              "lws <= 1.0",
+              "lws",
           ],
           "test": [
               "nose",

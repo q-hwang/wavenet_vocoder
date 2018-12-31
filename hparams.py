@@ -20,7 +20,6 @@ hparams = tf.contrib.training.HParams(
     # input and softmax output are assumed.
     # **NOTE**: if you change the one of the two parameters below, you need to
     # re-run preprocessing before training.
-    # **NOTE**: scaler input (raw or mulaw) is experimental. Use it your own risk.
     input_type="raw",
     quantize_channels=65536,  # 65536 or 256
 
@@ -63,6 +62,10 @@ hparams = tf.contrib.training.HParams(
     kernel_size=3,
     # If True, apply weight normalization as same as DeepVoice3
     weight_normalization=True,
+    # Use legacy code or not. Default is True since we already provided a model
+    # based on the legacy code that can generate high-quality audio.
+    # Ref: https://github.com/r9y9/wavenet_vocoder/pull/73
+    legacy=True,
 
     # Local conditioning (set negative value to disable))
     cin_channels=80,
