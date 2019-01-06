@@ -24,7 +24,7 @@ def build_from_path(in_dir, out_dir, num_workers=1, tqdm=lambda x: x):
             futures.append(executor.submit(
                 partial(_process_utterance, out_dir, index, parts[0], parts[1])))
             index += 1
-    
+
     with open(os.path.join(in_dir, 'eval.txt'), encoding='utf-8') as f:
         for line in f:
             parts = line.strip().split('|')
@@ -39,7 +39,8 @@ def _process_utterance(out_dir, index, wav_path, text):
     wav = audio.load_wav(wav_path)
 
     if hparams.rescaling:
-        wav = wav / np.abs(wav).max() * hparams.rescaling_max
+        if np.abs(wav).max() != 0:
+            wav = wav / np.abs(wav).max() * hparams.rescaling_max
 
     # Mu-law quantize
     if is_mulaw_quantize(hparams.input_type):

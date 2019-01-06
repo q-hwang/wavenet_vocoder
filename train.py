@@ -333,6 +333,12 @@ class DiscretizedMixturelogisticLoss(nn.Module):
             input, target, num_classes=hparams.quantize_channels,
             log_scale_min=hparams.log_scale_min, reduce=False)
         assert losses.size() == target.size()
+        
+ 
+        if not np.isfinite(losses.data.cpu()).all() or mask_.sum() == 0:
+            print("divide by 0?")
+            import pdb; pdb.set_trace()
+        
         return ((losses * mask_).sum()) / mask_.sum()
 
 
@@ -413,6 +419,12 @@ def collate_fn(batch):
 
     # Lengths
     input_lengths = [len(x[0]) for x in batch]
+    
+    for l in input_lengths:
+        if l == 0:
+            print("length is 0!!!")
+            import pdb; pdb.set_trace()
+    
     max_input_len = max(input_lengths)
 
     # (B, T, C)
@@ -668,6 +680,17 @@ def __train_step(device, phase, epoch, global_step, global_test_step,
     # Update
     if train:
         loss.backward()
+        
+        for p in model.parameters():
+            if not np.isfinite(p.data.cpu()).all():
+                print("weight contains nan/inf !!!")
+                break
+                
+        norm = 0
+        for p in list(filter(lambda p: p.grad is not None, model.parameters())):  
+            norm += p.grad.data.norm().item()**2
+        norm = norm ** (1./2)
+           
         if clip_thresh > 0:
             grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), clip_thresh)
         optimizer.step()
@@ -682,7 +705,10 @@ def __train_step(device, phase, epoch, global_step, global_test_step,
     if train:
         if clip_thresh > 0:
             writer.add_scalar("gradient norm", grad_norm, step)
+        
         writer.add_scalar("learning rate", current_lr, step)
+#         print("grad norm: " + str(norm) + " loss: " + str(loss.item()))
+        writer.add_scalar("grad norm", norm, step)
 
     return loss.item()
 

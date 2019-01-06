@@ -42,7 +42,7 @@
   "test_size": 0.0441,
   "test_num_samples": null,
   "random_state": 1234,
-  "batch_size": 6,
+  "batch_size": 3,
   "adam_beta1": 0.9,
   "adam_beta2": 0.999,
   "adam_eps": 1e-08,
@@ -56,7 +56,7 @@
   "max_time_steps": 8000,
   "exponential_moving_average": true,
   "ema_decay": 0.9999,
-  "checkpoint_interval": 3000,
+  "checkpoint_interval": 1000,
   "train_eval_interval": 3000,
   "test_eval_epoch_interval": 5,
   "save_optimizer_state": true
