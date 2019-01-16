@@ -109,4 +109,7 @@ def expand(text):
 
 
 def get_pinyin(text):
-    return " ".join(map(lambda s: s[0], pinyin(text, style = Style.TONE3)))
+    t = " ".join(map(lambda s: s[0], pinyin(text, style = Style.TONE3)))
+    return re.sub('[a-z]+( |\Z)', lambda s: s.group()+'0' if  s.group()[-1] != ' ' else s.group()[:-1] +'0 ' , t)
+    
+
