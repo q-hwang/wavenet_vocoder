@@ -194,7 +194,7 @@ if __name__ == "__main__":
     checkpoint_name = splitext(basename(checkpoint_path))[0]
 
     os.makedirs(dst_dir, exist_ok=True)
-    dst_wav_path = join(dst_dir, "{}{}.wav".format(checkpoint_name, file_name_suffix))
+    dst_wav_path = join(dst_dir, "{}.wav".format(file_name_suffix))
 
     # DO generate
     waveform = wavegen(model, length, c=c, g=speaker_id, initial_value=initial_value, fast=True)
@@ -202,5 +202,5 @@ if __name__ == "__main__":
     # save
     librosa.output.write_wav(dst_wav_path, waveform, sr=hparams.sample_rate)
 
-    print("Finished! Check out {} for generated audio samples.".format(dst_dir))
+    print("Finished! Check out {} for generated audio.".format(dst_wav_path))
     sys.exit(0)
