@@ -137,6 +137,59 @@ def wavegen(model, length=None, c=None, g=None, initial_value=None,
     return y_hat
 
 def syn(preset, conditional_path, checkpoint_path, dst_dir, file_name_suffix):
+    with open(preset) as f:
+        hparams.parse_json(f.read())
+   
+    c = np.load(conditional_path)
+    if c.shape[1] != hparams.num_mels:
+        c = np.swapaxes(c, 0, 1)
+    
+    from train import build_model
+
+    # Model
+    model = build_model().to(device)
+
+    # Load checkpoint
+    print("Load checkpoint from {}".format(checkpoint_path))
+    if use_cuda:
+        checkpoint = torch.load(checkpoint_path)
+    else:
+        checkpoint = torch.load(checkpoint_path, map_location=lambda storage, loc: storage)
+    model.load_state_dict(checkpoint["state_dict"])
+    checkpoint_name = splitext(basename(checkpoint_path))[0]
+
+    os.makedirs(dst_dir, exist_ok=True)
+    dst_wav_path = join(dst_dir, "{}.wav".format(file_name_suffix))
+
+    # DO generate
+    waveform = wavegen(model, 32000, c=c, g=None, initial_value=None, fast=True)
+
+    # save
+    librosa.output.write_wav(dst_wav_path, waveform, sr=hparams.sample_rate)
+
+    print("Finished! Check out {} for generated audio.".format(dst_wav_path))
+
+
+if __name__ == "__main__":
+    args = docopt(__doc__)
+    print("Command line args:\n", args)
+    checkpoint_path = args["<checkpoint>"]
+    dst_dir = args["<dst_dir>"]
+
+    length = int(args["--length"])
+    initial_value = args["--initial-value"]
+    initial_value = None if initial_value is None else float(initial_value)
+    conditional_path = args["--conditional"]
+    # From https://github.com/Rayhane-mamah/Tacotron-2
+    symmetric_mels = args["--symmetric-mels"]
+    max_abs_value = float(args["--max-abs-value"])
+
+    file_name_suffix = args["--file-name-suffix"]
+    output_html = args["--output-html"]
+    speaker_id = args["--speaker-id"]
+    speaker_id = None if speaker_id is None else int(speaker_id)
+    preset = args["--preset"]
+
     # Load preset if specified
     if preset is not None:
         with open(preset) as f:
@@ -184,34 +237,4 @@ def syn(preset, conditional_path, checkpoint_path, dst_dir, file_name_suffix):
 
     print("Finished! Check out {} for generated audio.".format(dst_wav_path))
 
-
-if __name__ == "__main__":
-    args = docopt(__doc__)
-    print("Command line args:\n", args)
-    checkpoint_path = args["<checkpoint>"]
-    dst_dir = args["<dst_dir>"]
-
-    length = int(args["--length"])
-    initial_value = args["--initial-value"]
-    initial_value = None if initial_value is None else float(initial_value)
-    conditional_path = args["--conditional"]
-    # From https://github.com/Rayhane-mamah/Tacotron-2
-    symmetric_mels = args["--symmetric-mels"]
-    max_abs_value = float(args["--max-abs-value"])
-
-    file_name_suffix = args["--file-name-suffix"]
-    output_html = args["--output-html"]
-    speaker_id = args["--speaker-id"]
-    speaker_id = None if speaker_id is None else int(speaker_id)
-    preset = args["--preset"]
-
-    # Load preset if specified
-    if preset is not None:
-        with open(preset) as f:
-            hparams.parse_json(f.read())
-    # Override hyper parameters
-    hparams.parse(args["--hparams"])
-    assert hparams.name == "wavenet_vocoder"
-
-    syn(preset, conditional_path, checkpoint_path, dst_dir, file_name_suffix)
     sys.exit(0)
