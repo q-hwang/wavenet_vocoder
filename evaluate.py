@@ -32,7 +32,7 @@ import librosa
 from wavenet_vocoder.util import is_mulaw_quantize, is_mulaw, is_raw
 
 import audio
-from hparams import hparams
+from hparams_wavenet import hparams
 
 
 use_cuda = torch.cuda.is_available()

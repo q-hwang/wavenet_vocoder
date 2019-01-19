@@ -5,7 +5,7 @@ import os
 import audio
 from nnmnkwii.datasets import jsut
 from nnmnkwii.io import hts
-from hparams import hparams
+from hparams_wavenet import hparams
 from os.path import exists
 import librosa
 

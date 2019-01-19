@@ -5,7 +5,7 @@ import os
 import audio
 
 from nnmnkwii import preprocessing as P
-from hparams import hparams
+from hparams_wavenet import hparams
 from os.path import exists
 import librosa
 

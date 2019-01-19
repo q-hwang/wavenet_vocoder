@@ -58,7 +58,7 @@ from wavenet_vocoder.mixture import discretized_mix_logistic_loss
 from wavenet_vocoder.mixture import sample_from_discretized_mix_logistic
 
 import audio
-from hparams import hparams, hparams_debug_string
+from hparams_wavenet import hparams, hparams_debug_string
 
 global_step = 0
 global_test_step = 0

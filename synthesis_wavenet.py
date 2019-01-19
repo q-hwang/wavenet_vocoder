@@ -32,7 +32,7 @@ import librosa
 from wavenet_vocoder.util import is_mulaw_quantize, is_mulaw, is_raw
 
 import audio
-from hparams import hparams
+from hparams_wavenet import hparams
 
 
 torch.set_num_threads(4)
@@ -69,7 +69,7 @@ def wavegen(model, length=None, c=None, g=None, initial_value=None,
     Returns:
         numpy.ndarray : Generated waveform samples
     """
-    from train import sanity_check
+    from train_wavenet import sanity_check
     sanity_check(model, c, g)
 
     c = _to_numpy(c)
@@ -144,7 +144,7 @@ def syn(preset, conditional_path, checkpoint_path, dst_dir, file_name_suffix):
     if c.shape[1] != hparams.num_mels:
         c = np.swapaxes(c, 0, 1)
     
-    from train import build_model
+    from train_wavenet import build_model
 
     # Model
     model = build_model().to(device)
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     else:
         c = None
 
-    from train import build_model
+    from train_wavenet import build_model
 
     # Model
     model = build_model().to(device)

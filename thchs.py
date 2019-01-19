@@ -11,7 +11,7 @@ import librosa
 
 from wavenet_vocoder.util import is_mulaw_quantize, is_mulaw, is_raw
 
-from hparams import hparams
+from hparams_wavenet import hparams
 import pinyin
 import re
 

@@ -14,7 +14,7 @@ import os
 from os.path import dirname, join, basename, splitext
 import json
 
-from hparams import hparams
+from hparams_wavenet import hparams
 
 if __name__ == "__main__":
     args = docopt(__doc__)
